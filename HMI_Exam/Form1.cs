@@ -184,35 +184,28 @@ namespace HMI_Exam
         float[] freq = new float[7];
         Graphics g;
         Bitmap bmp = new Bitmap(440,290);
-        Pen p = new Pen(Color.Blue /*trb.SliderColorLow.ColorA*/, 4);
-        Pen p2 = new Pen(Color.Green);
+
+        Brush b = new SolidBrush(Color.Blue);
+        Brush b2 = new SolidBrush(Color.Red);
         Un4seen.Bass.Misc.Visuals spektrum = new Un4seen.Bass.Misc.Visuals();
+
+        float dIncreaser(float i, float max)
+        {
+            float k;
+            k = 1 + (float)Math.Sqrt(i * 2);
+            return k;
+        }
+
         private void tmrVisuals_Tick(object sender, EventArgs e)
         {
             Graphics g = Graphics.FromImage(bmp);
-            /*freq[1] = (spektrum.DetectFrequency(stream, 1, 100, true) * 55);
-            freq[2] = (spektrum.DetectFrequency(stream, 100, 300, true) * 110);
-            freq[3] = (spektrum.DetectFrequency(stream, 300, 1000, true) * 385);
-            freq[4] = (spektrum.DetectFrequency(stream, 1000, 3000, true) * 550);
-            freq[5] = (spektrum.DetectFrequency(stream, 3000, 6000, true) * 825);
-            freq[6] = (spektrum.DetectFrequency(stream, 6000, 20000, true) * 2475);
-            freq[1] = Math.Min(freq[1], 100);
-            freq[2] = Math.Min(freq[2], 100);
-            freq[3] = Math.Min(freq[3], 100);
-            freq[4] = Math.Min(freq[4], 100);
-            freq[5] = Math.Min(freq[5], 100);
-            freq[6] = Math.Min(freq[6], 100);*/
-            // Debug.Print("===")
+           
             float[] d = new float[1024];
-            int k;
-            int x;
-            int y;
-            Brush b = default(Brush);
+
             g.Clear(Color.White);
             Un4seen.Bass.BASSActive isActive = default(Un4seen.Bass.BASSActive);
             isActive = Bass.BASS_ChannelIsActive(stream);
 
-            
             if (isActive == Un4seen.Bass.BASSActive.BASS_ACTIVE_PLAYING) {
                 
 	            Bass.BASS_ChannelGetData(stream, d, (int)Un4seen.Bass.BASSData.BASS_DATA_FFT1024);
@@ -223,27 +216,30 @@ namespace HMI_Exam
 	            }
             }
 
-            for (int i = 0; i <= 511; i += 2) {
-	            k = (int)(255 * d[i] * 10);
-	            k = Math.Min(k, 255);
+            int amount = 512;
+            int step = (int)(1024 / amount);
+            float x, y, w, h;
 
-	            
-	            x = (i + 1) / 1024 * bmp.Width;
-	            y = (i + 1) / 1024 * bmp.Height;
-	            x = bmp.Width;
-	            y = bmp.Height - 3;
-	            g.DrawLine(p, i * 2 + 10, y, i * 2 + 10, y * (1 - d[i] * 5));
-                /*if (i > 0)
-                {
-                    g.DrawLine(p, i * 2 + 10, y * (1 - d[i] * 5), (i - 1) * 2 + 10, y * (1 - d[i - 1] * 5));
-                }*/
-                //p = new Pen(Color.Red, 1);
-	            //g.DrawLine(p, i * 2 + 10, y, i * 2 + 10, y * (1 - d[i] * 5));
+            int j = -1;
+
+            for (int i = 0; i < 1024; i += step) {
+                
+                j++;
+	            x = ((float)i / (float)amount * bmp.Width);
+                w = Math.Max(((float)bmp.Width / (float)amount), 3);
+
+                y = bmp.Height * (1 - d[i] * dIncreaser(i, 1024)) - 2;
+                h = bmp.Height + 2;// -y - 3;
+
+                g.FillRectangle(b, x, y, w, h - y);
+               
 	            dd[i] = dd[i] - 0.002F;
 	            if (dd[i] < d[i])
 		            dd[i] = d[i];
-                b = new SolidBrush(Color.Red);
-	            g.FillRectangle(b, i * 2 + 8, y * (1 - dd[i] * 5) - 2, 4, 2);
+
+                y = bmp.Height * (1 - dd[i] * dIncreaser(i, 1024)) - 2;
+                g.FillRectangle(b2, x, y, w, 2);
+	            
             }
             pbVisuals.Image = bmp;
         }
@@ -252,8 +248,6 @@ namespace HMI_Exam
         {
 
         }
-
-        //beautifying
 
         public const int WM_NCLBUTTONDOWN = 0xA1;
         public const int HT_CAPTION = 0x2;
@@ -333,8 +327,8 @@ namespace HMI_Exam
                 ColorToHSV(cc, out h, out s, out v);
                 v = Math.Min(1, v + 0.1);
                 cc = ColorFromHSV(h, s, v);
-                v = Math.Min(1, v + 0.3);
-                Color cc2 = cc = ColorFromHSV(h, s, v);
+                v = Math.Min(1, v + 0.5);
+                Color cc2 = ColorFromHSV(h, s, v);
                 updateAllColors(cc, cc2);
             }
             catch (Exception ex)
@@ -350,6 +344,9 @@ namespace HMI_Exam
             trbPosition.SliderColorLow.ColorB = lighterForeColor;
             trbVolume.SliderColorLow.ColorA = lighterForeColor;
             trbVolume.SliderColorLow.ColorB = lighterForeColor;
+
+            b = new SolidBrush(lighterForeColor);
+            b2 = new SolidBrush(backColor);
         }
 
         private void frmMain_MouseDown(object sender, MouseEventArgs e)
