@@ -14,6 +14,8 @@ namespace HMI_Exam
     using Un4seen.Bass;
     using System.Drawing;
     using System.Drawing.Drawing2D;
+    using Microsoft.WindowsAPICodePack.Taskbar;
+    using Microsoft.WindowsAPICodePack.Shell;
 
     public partial class frmMain : Form
     {
@@ -28,6 +30,9 @@ namespace HMI_Exam
 
         private int stream = -1;
 
+        ThumbnailToolBarButton tblPrev = new ThumbnailToolBarButton(Icon.ExtractAssociatedIcon(Application.StartupPath + "\\tlbprev.ico"), "Prev");
+        ThumbnailToolBarButton tblPlay = new ThumbnailToolBarButton(Icon.ExtractAssociatedIcon(Application.StartupPath + "\\tlbplay.ico"), "Play");
+        ThumbnailToolBarButton tblNext = new ThumbnailToolBarButton(Icon.ExtractAssociatedIcon(Application.StartupPath + "\\tlbnext.ico"), "Next");
         private Region GetRegion(Bitmap _img)
         {
             var rgn = new Region();
@@ -124,22 +129,26 @@ namespace HMI_Exam
 
             currentPlayingTrackFile = url;
             tmrUpdateControls_Tick(null, null);
+
+            
         }
 
         private void cmdPlay_Click(object sender, EventArgs e)
         {
             Un4seen.Bass.BASSActive isActive = default(Un4seen.Bass.BASSActive);
-
             isActive = Bass.BASS_ChannelIsActive(stream);
             if (isActive == Un4seen.Bass.BASSActive.BASS_ACTIVE_PLAYING)
             {
                 Bass.BASS_ChannelPause(stream);
                 cmdPlay.BackgroundImage = pbPlayPic.BackgroundImage; 
+                TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.Paused);
+            
             }
             else if (isActive == Un4seen.Bass.BASSActive.BASS_ACTIVE_PAUSED)
             {
                 Bass.BASS_ChannelPlay(stream, false);
                 cmdPlay.BackgroundImage = pbPausePick.BackgroundImage;
+                TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.Normal);
             }
 
         }
@@ -164,6 +173,9 @@ namespace HMI_Exam
                 lblTime1.Text = Un4seen.Bass.Utils.FixTimespan(tElapsed, "MMSS");
 
                 trbPosition.MaxValue = (int)(Bass.BASS_ChannelGetLength(stream) / 1000);
+
+                TaskbarManager.Instance.SetProgressValue((int)(Bass.BASS_ChannelGetPosition(stream) / 1000), (int)(Bass.BASS_ChannelGetLength(stream) / 1000), this.Handle);
+
                 if (!shouldChangePosition)
                 {
                     trbPosition.Value = (int)(Bass.BASS_ChannelGetPosition(stream) / 1000);
@@ -175,7 +187,19 @@ namespace HMI_Exam
                         }
                     }
                 }
-                
+
+                Un4seen.Bass.BASSActive isActive = default(Un4seen.Bass.BASSActive);
+                isActive = Bass.BASS_ChannelIsActive(stream);
+                if (isActive == Un4seen.Bass.BASSActive.BASS_ACTIVE_PLAYING)
+                {
+                    TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.Normal);
+
+                }
+                else if (isActive == Un4seen.Bass.BASSActive.BASS_ACTIVE_PAUSED)
+                {
+                    TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.Paused);
+                }
+
             }
             catch (Exception ex) { }
         }
@@ -474,6 +498,15 @@ namespace HMI_Exam
                     lbFiles.Items.Add(s);
                 }
             }
+        }
+
+        private void frmMain_Shown(object sender, EventArgs e)
+        {
+            TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.Normal);
+            TaskbarManager.Instance.ThumbnailToolBars.AddButtons(this.Handle, tblPrev, tblPlay, tblNext);
+            tblPlay.Click += (s, e1) => { cmdPlay.PerformClick(); };
+            tblPrev.Click += (s, e1) => { cmdPrev.PerformClick(); };
+            tblNext.Click += (s, e1) => { cmdNext.PerformClick(); }; 
         }
     }
 }
